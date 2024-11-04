@@ -138,7 +138,6 @@ class Assembler:
             line = line.split(';')[0].strip()  # Remove comments
             if not line:  # Skip empty lines
                 continue
-
             # Handle labels
             label_match = re.match(r'(\w+):\s*(.*)', line)
             if label_match:
@@ -153,7 +152,8 @@ class Assembler:
 
             if line:  # Only count instructions
                 self.instructions.append(line)
-                address += 4  # Assuming each instruction is 4 bytes
+                if not ".global" in line:
+                    address += 4  # Assuming each instruction is 4 bytes
         print(self.symbol_table)
         
     # def tokenize_instruction(self, instruction):
@@ -191,8 +191,10 @@ class Assembler:
         self.current_address = 0
         for instruction in self.instructions:
             print("INST: ", instruction)
+            # self.encode_instruction(instruction)
             self.machine_code.append(self.encode_instruction(instruction))
             self.current_address += 4
+        print("SYMBOL TABLE \n", self.symbol_table)
     
     def encode_immediate(self, immediate_value):
         # The immediate value needs to fit within the last 12 bits of the 32-bit instruction
@@ -221,17 +223,12 @@ class Assembler:
         if instruction_name[0] == 'S':
             return '1'
         
-        def get_imm(self, immediate_str):
-            if immediate_str.startswith("0x"):
-                # Hexadecimal input
-                immediate = int(immediate_str, 16)
-            elif immediate_str.startswith("0b"):
-                # Binary input
-                immediate = int(immediate_str, 2)
-            else:
-                # Decimal input
-                immediate = int(immediate_str)
-            return immediate
+    def get_imm(self, immediate_str):
+        if immediate_str.startswith("0x"):
+            immediate = int(immediate_str, 16)
+        else:
+            immediate = int(immediate_str)
+        return immediate
     
 
     def mov_command(self,instruction_name,  tokens, instruction):
@@ -999,8 +996,11 @@ class Assembler:
         tokens = self.tokenize_instruction(instruction)
         print("TOKENS: ", tokens)
         instruction_name = tokens[0].upper()
-
-        if "MOV" in instruction_name:
+        print("INST NAME: ", instruction_name)
+        if ".GLOBAL" == instruction_name:
+            print("SETTING: ", tokens[1])
+            self.symbol_table[tokens[1]].set_global()
+        elif "MOV" in instruction_name:
             return self.mov_command(instruction_name, tokens[1:], instruction)
         elif "ADD" in instruction_name:
             return self.add_command(instruction_name, tokens[1:], instruction)
@@ -1046,10 +1046,10 @@ class Assembler:
                 f.write(binary_data)
 
 
-
 if __name__ == "__main__":
     assembler = Assembler()
-    machine_code = assembler.assemble("vmout.asm")
-    print(f"Machine code: {machine_code}")
+    assembler.assemble("vmout.asm")
+    # machine_code = assembler.assemble("vmout.asm")
+    # print(f"Machine code: {machine_code}")
     
-    assembler.write_obj_file(machine_code, "asmout.obj")
+    # assembler.write_obj_file(machine_code, "asmout.obj")

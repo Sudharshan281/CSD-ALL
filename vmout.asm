@@ -1,3 +1,5 @@
+.global start
+.global loop2
 start:
     MOV R0, #0xA
     ADD R3, R2,#0xA
