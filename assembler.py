@@ -931,10 +931,54 @@ class Assembler:
 
         return machine_code
     
+    def str_register_command(self, instruction_name, tokens, instruction):
+        """
+        Converts STR R1, [R0, #0] to binary.
+        """
+        rt = self.regcode.get(tokens[0].upper(), None)  # Register to load (Rt)
+        rn = self.regcode.get(tokens[1].upper().split(',')[0][1:], None)  # Base register (Rn)
+        offset = int(tokens[2].split('#')[1][:-1])  # Immediate offset
+        
+        print(rt, rn, offset)
+        
+        condition = self.get_condition(instruction_name)
+        immediate_flag_extended = '010'  # Using immediate (1 bit)
+        P = '1'  # Post-indexed addressing (1)
+        U = '1'  # Offset is added (1)
+        W = '1'  # Writeback (1)
+        set_flags = '0'
+        
+        imm12 = f"{offset:012b}"  # Convert offset to 12 bits
+        
+        binary_instruction = (
+            f"{condition}"          # Condition (4 bits)
+            f"{immediate_flag_extended}"     # Immediate flag (1 bit)
+            f"{P}{U}0{W}"           # P, U, 1, W (4 bits)
+            f"{set_flags}"          # Set flags (1 bit)
+            f"{rn:04b}"             # Base register (Rn) (4 bits)
+            f"{rt:04b}"             # Register to load (Rt) (4 bits)
+            f"{imm12}"              # Immediate value (12 bits)
+        )
+        
+        # Check for 32 bits
+        if len(binary_instruction) != 32:
+            print("LEN: ", len)
+            raise ValueError(f"Binary instruction is not 32 bits: {binary_instruction}")
+        print("BINARY: ", binary_instruction)
+        # Convert binary instruction to hexadecimal
+        machine_code = f"{int(binary_instruction, 2):08X}"  # Convert binary to hex
+        print("Machine code ",machine_code)
+        
+        return machine_code
+    
     def str_command(self, instruction_name, tokens, instruction):
         """
         Converts STR R1, [R0], #0 to binary.
+        now, new fun for STR R1, [R0, #0]
+        
         """
+        if '[' in tokens[1]:
+            return self.str_register_command(instruction_name, tokens, instruction)
         rt = self.regcode.get(tokens[0].upper(), None)  # Register to store (Rt)
         rn = self.regcode.get(tokens[1].upper().split(',')[0], None)  # Base register (Rn)
         offset = int(tokens[1].split('#')[1]) if '#' in tokens[1] else 0  # Immediate offset
