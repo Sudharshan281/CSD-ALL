@@ -156,36 +156,36 @@ class Assembler:
                     address += 4  # Assuming each instruction is 4 bytes
         print(self.symbol_table)
         
-    # def tokenize_instruction(self, instruction):
-    #     tokens = []
-    #     current_token = ''
-    #     stack = []
+        # def tokenize_instruction(self, instruction):
+        #     tokens = []
+        #     current_token = ''
+        #     stack = []
 
-    #     for char in instruction:
-    #         if char in '[], ':
-    #             if current_token:
-    #                 tokens.append(current_token.strip())
-    #                 current_token = ''
-    #             if char == '[':
-    #                 stack.append(len(tokens))
-    #                 tokens.append([])
-    #             elif char == ']':
-    #                 if stack:
-    #                     group_start = stack.pop()
-    #                     tokens[group_start] = tokens[group_start]
-    #                 continue
-    #             elif char == ',':
-    #                 if current_token:
-    #                     tokens.append(current_token.strip())
-    #                     current_token = ''
-    #                 continue
-    #         else:
-    #             current_token += char
+        #     for char in instruction:
+        #         if char in '[], ':
+        #             if current_token:
+        #                 tokens.append(current_token.strip())
+        #                 current_token = ''
+        #             if char == '[':
+        #                 stack.append(len(tokens))
+        #                 tokens.append([])
+        #             elif char == ']':
+        #                 if stack:
+        #                     group_start = stack.pop()
+        #                     tokens[group_start] = tokens[group_start]
+        #                 continue
+        #             elif char == ',':
+        #                 if current_token:
+        #                     tokens.append(current_token.strip())
+        #                     current_token = ''
+        #                 continue
+        #         else:
+        #             current_token += char
 
-    #     if current_token:
-    #         tokens.append(current_token.strip())
+        #     if current_token:
+        #         tokens.append(current_token.strip())
 
-    #     return tokens
+        #     return tokens
 
     def second_pass(self):
         self.current_address = 0
@@ -198,7 +198,7 @@ class Assembler:
     
     def encode_immediate(self, immediate_value):
         # The immediate value needs to fit within the last 12 bits of the 32-bit instruction
-        if 0 <= immediate_value < (1 << 12):  # 0 to 4095 (12 bits)
+        if 0 <= immediate_value < (1 << 32):  # 0 to 4095 (12 bits)
             return f"{immediate_value:012b}"  # Return as 12-bit binary
         else:
             raise ValueError("Immediate value out of range for this implementation.")
@@ -214,7 +214,7 @@ class Assembler:
         try:
             return self.condition_codes[condition_str]
         except KeyError:
-            return "1110"  # Default to "1101" in case of an error
+            return '1110'  # Default to "1101" in case of an error
     
     def get_set_flag(self, instruction_name):
         instruction_name = instruction_name[3:].upper()
@@ -230,22 +230,27 @@ class Assembler:
             immediate = int(immediate_str)
         return immediate
     
-
     def mov_command(self,instruction_name,  tokens, instruction):
         """
         MOV R0, #20
         Encodes a MOV operation by extracting the destination register and the immediate value.
+        
         """
+        print("TOKENS: ", tokens)
         rd = self.regcode.get(tokens[0].upper(), None)
+        rm = None
         print("RD: ", rd)
 
         if rd is None:
             raise ValueError("Invalid register")
-
-        # Handle immediate value, expecting it to be in the format #value
-        immediate_str = tokens[1].strip('#')
-        immediate = self.get_imm(immediate_str)
-        immediate_encoded = self.encode_immediate(immediate_value=immediate)
+        
+        if re.match(r'R\d+', tokens[1].upper()):
+            rm = self.regcode.get(tokens[1].upper(), None)
+        else:
+            # Handle immediate value, expecting it to be in the format #value
+            immediate_str = tokens[1].strip('#')
+            immediate = self.get_imm(immediate_str)
+            immediate_encoded = self.encode_immediate(immediate_value=immediate)
 
         # Opcode for MOV
         opcode = self.opcode.get("MOV")
@@ -253,21 +258,36 @@ class Assembler:
         # Condition and flags
         condition = self.get_condition(instruction_name)
         class_type = '00'   # Data processing
-        immediate_flag = '1'  # Immediate flag
+        immediate_flag = '0'  # Immediate flag
+        if rm is None:
+            immediate_flag = '1'
         set_flags = self.get_set_flag(instruction_name)     # Not updating flags
 
         # Final binary instruction
-        binary_instruction = (
-            f"{condition}"
-            f"{class_type}"
-            f"{immediate_flag}"
-            f"{opcode}"  # Ensure opcode is in 8-bit binary
-            f"{set_flags}"
-            f"{rd:04b}"      # Ensure rd is in 4-bit binary
-            f"0000"          # Unused bits
-            f"{immediate_encoded}"  # Immediate value (8-bits)
-        )
-
+        binary_instruction = ()
+        if rm is None:
+            binary_instruction = (
+                f"{condition}"
+                f"{class_type}"
+                f"{immediate_flag}"
+                f"{opcode}"  # Ensure opcode is in 8-bit binary
+                f"{set_flags}"
+                f"{rd:04b}"      # Ensure rd is in 4-bit binary
+                f"0000"          # Unused bits
+                f"{immediate_encoded}"  # Immediate value (8-bits)
+            )
+        else:
+            binary_instruction = (
+                f"{condition}"
+                f"{class_type}"
+                f"{immediate_flag}"
+                f"{opcode}"  # Ensure opcode is in 8-bit binary
+                f"{set_flags}"
+                f"0000"
+                f"{rd:04b}"      # Ensure rd is in 4-bit binary
+                f"00000000"
+                f"{rm:04b}"      # Ensure rm is in 4-bit binary
+            )
         print(f"Binary instruction: {binary_instruction}")
         # Check for 32 bits
         if len(binary_instruction) != 32:
@@ -745,36 +765,64 @@ class Assembler:
     def cmp_command(self, instruction_name, tokens, instructions):
         """
         Converts CMP R8, R6 to binary.
+        or CMP R8, #20
         """
+        print(f"TOKENS: {tokens}")
         rd = 0
         rn = self.regcode.get(tokens[0].upper(), None)  # First register (R8)
-        rm = self.regcode.get(tokens[1].upper(), None)  # Second register (R6)
+        rm = None
+        if re.match(r'R\d+', tokens[1].upper()):
+            rm = self.regcode.get(tokens[1].upper(), None)  # Second register (R6)
+        else:
+            # Handle immediate value, expecting it to be in the format #value
+            immediate_str = tokens[1].strip('#')
+            immediate = self.get_imm(immediate_str)
+            immediate_encoded = self.encode_immediate(immediate_value=immediate)
         
-        print(f"TOKENS: {tokens}")
         print(f"RD: {rd}, RN: {rn}, RM: {rm}")
         
         # Validate registers
-        if None in (rn, rm):
-            raise ValueError("Invalid register")
+        # if None in (rn, rm):
+        #     raise ValueError("Invalid register")
 
         # Opcode for CMP
         opcode = self.opcode.get("CMP")  # CMP opcode in 4 bits
 
         # Condition and flags
-        condition = self.get_condition(instruction_name)
-        immediate_flag = 0  # Using registers (1 bit)
+        
+        condition = int(self.get_condition(instruction_name))
+        print("INST NAME: ", instruction_name)
+        print("CONDITIOn: ", condition) 
+        immediate_flag = 1  # Using registers (1 bit)
+        if rm is None:
+            immediate_flag = 0
         set_flags = '1'  # CMP sets flags
 
         # Final binary instruction
-        binary_instruction = (
-            f"{condition}"          # Condition (4 bits)
-            f"{immediate_flag:03b}"     # Immediate flag (1 bit)
-            f"{opcode}"             # Opcode (4 bits)
-            f"{set_flags}"          # Set flags (1 bit)
-            f"{rn:04b}"             # First register (4 bits)
-            f"{rd:04b}"               # Rd is not used (4 bits)
-            f"{rm:012b}"             # Second register (4 bits)
-        )
+        binary_instruction = ()
+        if rm is not None:
+            print("IN first ifcond")
+            binary_instruction = (
+                f"1110"          # Condition (4 bits)
+                f"00"
+                f"{immediate_flag:01b}"     # Immediate flag (1 bit)
+                f"{opcode}"             # Opcode (4 bits)
+                f"{set_flags}"          # Set flags (1 bit)
+                f"{rn:04b}"             # First register (4 bits)
+                f"{rd:04b}"               # Rd is not used (4 bits)
+                f"{rm:012b}"             # Second register (4 bits)
+            )
+        else:
+            binary_instruction = (
+                f"1110"          # Condition (4 bits)
+                f"00"
+                f"{immediate_flag:01b}"     # Immediate flag (1 bit)
+                f"{opcode}"             # Opcode (4 bits)
+                f"{set_flags}"          # Set flags (1 bit)
+                f"{rn:04b}"             # First register (4 bits)
+                f"{rd:04b}"               # Rd is not used (4 bits)
+                f"{rm:012b}"             # Second register (4 bits)
+            )
 
         # Check for 32 bits
         if len(binary_instruction) != 32:
@@ -882,7 +930,10 @@ class Assembler:
         """
         rt = self.regcode.get(tokens[0].upper(), None)  # Register to load (Rt)
         rn = self.regcode.get(tokens[1].upper().split(',')[0], None)  # Base register (Rn)
-        offset = (tokens[2].split('#')[1]) if '#' in tokens[2] else "0"  # Immediate offset
+        offset = "0"
+        #if len of tokens is more than 2 then check for offset
+        if len(tokens) > 2:
+            offset = (tokens[2].split('#')[1]) if '#' in tokens[2] else "0"  # Immediate offset
         print("TOKEN1 ", tokens[1])
         print("BEFORE OFFSET ", offset)
         offset = self.get_imm(offset)
@@ -1053,3 +1104,4 @@ if __name__ == "__main__":
     # print(f"Machine code: {machine_code}")
     
     # assembler.write_obj_file(machine_code, "asmout.obj")
+    

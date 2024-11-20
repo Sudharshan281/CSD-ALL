@@ -13,3 +13,4 @@ class ST_Entry:
 
     def __repr__(self):
         return f"ST_Entry(type={self.type}, value={self.value}, is_global={self.is_global})"
+    
