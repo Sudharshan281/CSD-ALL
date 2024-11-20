@@ -1030,14 +1030,60 @@ class Assembler:
         print("MACHINE CODE: ", machine_code)
         return machine_code
 
+    def ldr_register_command(self, instruction_name, tokens, instruction):
+        """
+        Converts LDR R0, [R7, #4] to binary.
+        ['R0', '[R7', '#4]'] -> tokens array eg
+        """
+        # print("TOKENS ", tokens)
+        # print("NUM:" ,tokens[2].split('#')[1][:-1])
+        rt = self.regcode.get(tokens[0].upper(), None)  # Register to load (Rt)
+        rn = self.regcode.get(tokens[1].upper().split(',')[0][1:], None)  # Base register (Rn)
+        offset = int(tokens[2].split('#')[1][:-1])  # Immediate offset
+        
+        print(rt, rn, offset)
+        
+        condition = self.get_condition(instruction_name)
+        immediate_flag_extended = '010'  # Using immediate (1 bit)
+        P = '0'  # Post-indexed addressing (1)
+        U = '1'  # Offset is added (1)
+        W = '1'  # Writeback (1)
+        set_flags = '1'
+        
+        imm12 = f"{offset:012b}"  # Convert offset to 12 bits
+        
+        binary_instruction = (
+            f"{condition}"          # Condition (4 bits)
+            f"{immediate_flag_extended}"     # Immediate flag (1 bit)
+            f"{P}{U}0{W}"           # P, U, 1, W (4 bits)
+            f"{set_flags}"          # Set flags (1 bit)
+            f"{rn:04b}"             # Base register (Rn) (4 bits)
+            f"{rt:04b}"             # Register to load (Rt) (4 bits)
+            f"{imm12}"              # Immediate value (12 bits)
+        )
+        
+        # Check for 32 bits
+        if len(binary_instruction) != 32:
+            print("LEN: ", len)
+            raise ValueError(f"Binary instruction is not 32 bits: {binary_instruction}")
+        print("BINARY: ", binary_instruction)
+        # Convert binary instruction to hexadecimal
+        machine_code = f"{int(binary_instruction, 2):08X}"  # Convert binary to hex
+        print("Machine code ",machine_code)
+        
+        return machine_code
+        
     
     def ldr_command(self, instruction_name, tokens, instruction):
         """
         Converts LDR R11, [R0], #0 to binary.
         but if the assembly code has =, then it's a diff inst, like LDR R0, =temp1, so we'll call a diff fn
+        diff fn for INST:  LDR R0, [R7, #4]
         """
         if '=' in tokens[1]:
             return self.ldr_literal_command(instruction_name, tokens, instruction)
+        if '[' in tokens[1]:
+            return self.ldr_register_command(instruction_name, tokens, instruction)
         rt = self.regcode.get(tokens[0].upper(), None)  # Register to load (Rt)
         rn = self.regcode.get(tokens[1].upper().split(',')[0], None)  # Base register (Rn)
         offset = "0"
