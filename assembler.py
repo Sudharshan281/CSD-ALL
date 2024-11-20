@@ -409,72 +409,129 @@ class Assembler:
 
         return machine_code
     
-
+    
     def sub_command(self, instruction_name, tokens, instruction):
-        """
-        Converts SUB R5, R4, R4, LSL #2 to binary.
-        """
         # Get register codes for destination and source registers
-        rd = self.regcode.get(tokens[0].upper(), None)  # Destination register (R5)
-        rn = self.regcode.get(tokens[1].upper(), None)  # First source register (R4)
-        rm = self.regcode.get(tokens[2].upper(), None)  # Second source register (R4)
-
-        print(f"TOKENS: {tokens}")
+        rd = self.regcode.get(tokens[0].upper(), None)  # Destination register
+        rn = self.regcode.get(tokens[1].upper(), None)  # First source register
+        rm = self.regcode.get(tokens[2].upper(), None)  # Second source register
+        is_imm = False
+        offset = 0
         
-        # Validate registers
         if None in (rd, rn, rm):
-            raise ValueError("Invalid register")
+            print("RM IS NONE")
+            is_imm = True
+            offset = self.get_imm(tokens[2].split('#')[1]) if '#' in tokens[2] else 0
+            print("OFFSET SUB ", offset)
+            
+        print(f"TOKENS: {tokens}")
+        print(f"RD: {rd}, RN: {rn}, RM: {rm}, offset: {offset}")
+        
+        # # Validate registers  #NOT REQUIRED HERE
+        # if None in (rd, rn, rm):
+        #     raise ValueError("Invalid register")
 
-        shift_type_str = tokens[3].upper() 
-        shift_amount_str = tokens[4].strip('#')  
-        shift_amount = self.get_imm(shift_amount_str)  
-        print("SHIFT AMT ", shift_amount)
-        shift_type = self.shift_codes.get(shift_type_str)
-        if shift_type is None:
-            raise ValueError(f"Invalid shift type: {shift_type_str}")
-
-        print(f"RD: {rd}, RN: {rn}, RM: {rm}, Shift Type: {shift_type}, Shift Amount: {shift_amount}")
-
-        # Opcode for SUB
+        # Opcode for ADD
         opcode = self.opcode.get("SUB")
         print(f"Opcode for SUB: {opcode}")
-
         # Condition and flags
         condition = self.get_condition(instruction_name)
-        immediate_flag = '0'  # Not using an immediate value
         class_type = '00'   # Data processing
+        immediate_flag_extend = '000'  # Not using an immediate value
+        if is_imm:
+            immediate_flag_extend = '001'
+            rm = offset
         set_flags = self.get_set_flag(instruction_name)   
-
-        # Shift amount (6 bits) and encode as binary
-        shift_amount_binary = f"{shift_amount:05b}"  # 6 bits for shift amount
-        print("SABIN ", shift_amount_binary)
+        print("S: ", set_flags)
         # Final binary instruction
-        print("SHFT TYPE ", shift_type)
         binary_instruction = (
             f"{condition}"          # Condition (4 bits)
-            f"{class_type}"
-            f"{immediate_flag}"     # Immediate flag (1 bit)
-            f"{opcode}"        # Opcode (4 bits, modify as per your opcode bit length)
+            f"{immediate_flag_extend}"     # Immediate flag (1 bit)
+            f"{opcode}"        # Opcode (6 bits)
             f"{set_flags}"          # Set flags (1 bit)
             f"{rn:04b}"             # First source register (4 bits)
             f"{rd:04b}"             # Destination register (4 bits)
-            f"{shift_amount_binary}" # Shift amount (6 bits)
-            f"{shift_type:02b}"         # Shift type (2 bits)
-            f"0"
-            f"{rm:04b}"             # Second source register (4 bits)
+            f"{rm:012b}"            # Second operand (12 bits)
         )
 
         print(f"Binary instruction: {binary_instruction}")
-        
         # Check for 32 bits
         if len(binary_instruction) != 32:
-            print("LEN: ", len(binary_instruction))
+            print("LEN: ", len)
             raise ValueError(f"Binary instruction is not 32 bits: {binary_instruction}")
 
         # Convert binary instruction to hexadecimal
         machine_code = f"{int(binary_instruction, 2):08X}"  # Convert binary to hex
+        print(f"Machine code: {machine_code}")
 
         return machine_code
+
+    # def sub_command(self, instruction_name, tokens, instruction):
+    #     """
+    #     Converts SUB R5, R4, R4, LSL #2 to binary.
+    #     how to make this work for SUB R7, R7, #4??
+    #     """
+    #     # Get register codes for destination and source registers
+    #     rd = self.regcode.get(tokens[0].upper(), None)  # Destination register (R5)
+    #     rn = self.regcode.get(tokens[1].upper(), None)  # First source register (R4)
+    #     rm = self.regcode.get(tokens[2].upper(), None)  # Second source register (R4)
+
+    #     print(f"TOKENS: {tokens}")
+        
+    #     # Validate registers
+    #     if None in (rd, rn, rm):
+    #         raise ValueError("Invalid register")
+
+    #     shift_type_str = tokens[3].upper() 
+    #     shift_amount_str = tokens[4].strip('#')  
+    #     shift_amount = self.get_imm(shift_amount_str)  
+    #     print("SHIFT AMT ", shift_amount)
+    #     shift_type = self.shift_codes.get(shift_type_str)
+    #     if shift_type is None:
+    #         raise ValueError(f"Invalid shift type: {shift_type_str}")
+
+    #     print(f"RD: {rd}, RN: {rn}, RM: {rm}, Shift Type: {shift_type}, Shift Amount: {shift_amount}")
+
+    #     # Opcode for SUB
+    #     opcode = self.opcode.get("SUB")
+    #     print(f"Opcode for SUB: {opcode}")
+
+    #     # Condition and flags
+    #     condition = self.get_condition(instruction_name)
+    #     immediate_flag = '0'  # Not using an immediate value
+    #     class_type = '00'   # Data processing
+    #     set_flags = self.get_set_flag(instruction_name)   
+
+    #     # Shift amount (6 bits) and encode as binary
+    #     shift_amount_binary = f"{shift_amount:05b}"  # 6 bits for shift amount
+    #     print("SABIN ", shift_amount_binary)
+    #     # Final binary instruction
+    #     print("SHFT TYPE ", shift_type)
+    #     binary_instruction = (
+    #         f"{condition}"          # Condition (4 bits)
+    #         f"{class_type}"
+    #         f"{immediate_flag}"     # Immediate flag (1 bit)
+    #         f"{opcode}"        # Opcode (4 bits, modify as per your opcode bit length)
+    #         f"{set_flags}"          # Set flags (1 bit)
+    #         f"{rn:04b}"             # First source register (4 bits)
+    #         f"{rd:04b}"             # Destination register (4 bits)
+    #         f"{shift_amount_binary}" # Shift amount (6 bits)
+    #         f"{shift_type:02b}"         # Shift type (2 bits)
+    #         f"0"
+    #         f"{rm:04b}"             # Second source register (4 bits)
+    #     )
+
+    #     print(f"Binary instruction: {binary_instruction}")
+        
+    #     # Check for 32 bits
+    #     if len(binary_instruction) != 32:
+    #         print("LEN: ", len(binary_instruction))
+    #         raise ValueError(f"Binary instruction is not 32 bits: {binary_instruction}")
+
+    #     # Convert binary instruction to hexadecimal
+    #     machine_code = f"{int(binary_instruction, 2):08X}"  # Convert binary to hex
+
+    #     return machine_code
 
     def sbc_command(self, instruction_name, tokens, instruction):
         """
