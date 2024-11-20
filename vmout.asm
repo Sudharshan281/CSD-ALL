@@ -37,12 +37,9 @@ ADD R7, R7, #4
 MOV R0, #1
 STR R0, [R7]
 ADD R7, R7, #4
-LDR R0, [R7, #-4]
-LDR R1, [R7, #-8]
+
 SUB R0, R1, R0
-STR R0, [R7, #-8]
 SUB R7, R7, #4
-LDR R0, =temp_label_3
 STR R0, [R7]
 ADD R7, R7, #4
 STR R4, [R7]
@@ -53,12 +50,7 @@ MOV R4, R7
 SUB R5, R7, #16
 B factorial
 temp_label_3:
-LDR R0, [R7, #-4]
-LDR R1, [R7, #-8]
-MUL R0, R1, R0
-STR R0, [R7, #-8]
 SUB R7, R7, #4
-LDR R0, [R7, #-4]
 STR R0, [R5]
 ADD R1, R5, #4
 SUB R7, R4, #4
@@ -73,7 +65,6 @@ base_case:
 MOV R0, #1
 STR R0, [R7]
 ADD R7, R7, #4
-LDR R0, [R7, #-4]
 STR R0, [R5]
 ADD R1, R5, #4
 SUB R7, R4, #4
@@ -88,7 +79,6 @@ main:
 MOV R0, #10
 STR R0, [R7]
 ADD R7, R7, #4
-LDR R0, =temp_label_6
 STR R0, [R7]
 ADD R7, R7, #4
 STR R4, [R7]
@@ -99,7 +89,6 @@ MOV R4, R7
 SUB R5, R7, #16
 B factorial
 temp_label_6:
-LDR R0, [R7, #-4]
 STR R0, [R5]
 ADD R1, R5, #4
 SUB R7, R4, #4

@@ -35,6 +35,7 @@ class Assembler:
             "R13": 13,
             "R14": 14,
             "R15": 15,
+            "PC" : 15,
         }
         self.shift_codes = {
             "LSL" : 0,
