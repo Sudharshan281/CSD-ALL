@@ -214,7 +214,7 @@ class Assembler:
         try:
             return self.condition_codes[condition_str]
         except KeyError:
-            return '1110'  # Default to "1101" in case of an error
+            return "1110"  # Default to "1101" in case of an error
     
     def get_set_flag(self, instruction_name):
         instruction_name = instruction_name[3:].upper()
@@ -765,9 +765,9 @@ class Assembler:
     def cmp_command(self, instruction_name, tokens, instructions):
         """
         Converts CMP R8, R6 to binary.
-        or CMP R8, #20
+        or cmp R2, #20
         """
-        print(f"TOKENS: {tokens}")
+        immediate_encoded = None
         rd = 0
         rn = self.regcode.get(tokens[0].upper(), None)  # First register (R8)
         rm = None
@@ -779,9 +779,10 @@ class Assembler:
             immediate = self.get_imm(immediate_str)
             immediate_encoded = self.encode_immediate(immediate_value=immediate)
         
+        print(f"TOKENS: {tokens}")
         print(f"RD: {rd}, RN: {rn}, RM: {rm}")
-        
-        # Validate registers
+        print("IMMEDIATE ENCODED: ", immediate_encoded)
+        # # Validate registers
         # if None in (rn, rm):
         #     raise ValueError("Invalid register")
 
@@ -789,22 +790,18 @@ class Assembler:
         opcode = self.opcode.get("CMP")  # CMP opcode in 4 bits
 
         # Condition and flags
-        
-        condition = int(self.get_condition(instruction_name))
-        print("INST NAME: ", instruction_name)
-        print("CONDITIOn: ", condition) 
-        immediate_flag = 1  # Using registers (1 bit)
+        condition = self.get_condition(instruction_name)
+        immediate_flag = 0  # Using registers (1 bit)
         if rm is None:
-            immediate_flag = 0
+            immediate_flag = 1
         set_flags = '1'  # CMP sets flags
+        class_type = '00'
 
         # Final binary instruction
-        binary_instruction = ()
         if rm is not None:
-            print("IN first ifcond")
             binary_instruction = (
-                f"1110"          # Condition (4 bits)
-                f"00"
+                f"{condition}"          # Condition (4 bits)
+                f"{class_type}"
                 f"{immediate_flag:01b}"     # Immediate flag (1 bit)
                 f"{opcode}"             # Opcode (4 bits)
                 f"{set_flags}"          # Set flags (1 bit)
@@ -814,20 +811,20 @@ class Assembler:
             )
         else:
             binary_instruction = (
-                f"1110"          # Condition (4 bits)
-                f"00"
+                f"{condition}"          # Condition (4 bits)
+                f"{class_type}"
                 f"{immediate_flag:01b}"     # Immediate flag (1 bit)
                 f"{opcode}"             # Opcode (4 bits)
                 f"{set_flags}"          # Set flags (1 bit)
                 f"{rn:04b}"             # First register (4 bits)
-                f"{rd:04b}"               # Rd is not used (4 bits)
-                f"{rm:012b}"             # Second register (4 bits)
+                f"{rd:04b}"               # Rd is not used (4 bits as 0000)
+                f"{immediate_encoded}"             # Second register (4 bits)
             )
 
         # Check for 32 bits
+        print("BIN ", binary_instruction)
         if len(binary_instruction) != 32:
             raise ValueError(f"Binary instruction is not 32 bits: {binary_instruction}")
-        print("BIN ", binary_instruction)
         # Convert binary instruction to hexadecimal
         machine_code = f"{int(binary_instruction, 2):08X}"  # Convert binary to hex
 
