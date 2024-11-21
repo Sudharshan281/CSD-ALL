@@ -338,15 +338,27 @@ class Assembler:
         set_flags = self.get_set_flag(instruction_name)   
         print("S: ", set_flags)
         # Final binary instruction
-        binary_instruction = (
-            f"{condition}"          # Condition (4 bits)
-            f"{immediate_flag_extend}"     # Immediate flag (1 bit)
-            f"{opcode}"        # Opcode (6 bits)
-            f"{set_flags}"          # Set flags (1 bit)
-            f"{rn:04b}"             # First source register (4 bits)
-            f"{rd:04b}"             # Destination register (4 bits)
-            f"{rm:012b}"            # Second operand (12 bits)
-        )
+        if is_imm:
+            binary_instruction = (
+                f"{condition}"          # Condition (4 bits)
+                f"{immediate_flag_extend}"     # Immediate flag (1 bit)
+                f"{opcode}"        # Opcode (6 bits)
+                f"{set_flags}"          # Set flags (1 bit)
+                f"{rn:04b}"             # First source register (4 bits)
+                f"{rd:04b}"             # Destination register (4 bits)
+                f"{rm:012b}"            # Second operand (12 bits)
+            )
+        else:
+            binary_instruction = (
+                f"{condition}"          # Condition (4 bits)
+                f"{immediate_flag_extend}"     # Immediate flag (1 bit)
+                f"{opcode}"        # Opcode (6 bits)
+                f"{set_flags}"          # Set flags (1 bit)
+                f"{rn:04b}"             # First source register (4 bits)
+                f"{rd:04b}"             # Destination register (4 bits)
+                f"00000000"
+                f"{rm:04b}"            # Second operand (12 bits)
+            )
 
         print(f"Binary instruction: {binary_instruction}")
         # Check for 32 bits
@@ -1304,5 +1316,4 @@ if __name__ == "__main__":
     # print(f"Machine code: {machine_code}")
     
     # assembler.write_obj_file(machine_code, "asmout.obj")
-    
     
