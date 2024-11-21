@@ -273,8 +273,8 @@ class Assembler:
                 f"{immediate_flag}"
                 f"{opcode}"  # Ensure opcode is in 8-bit binary
                 f"{set_flags}"
-                f"{rd:04b}"      # Ensure rd is in 4-bit binary
                 f"0000"          # Unused bits
+                f"{rd:04b}" 
                 f"{immediate_encoded}"  # Immediate value (8-bits)
             )
         else:
@@ -1304,4 +1304,5 @@ if __name__ == "__main__":
     # print(f"Machine code: {machine_code}")
     
     # assembler.write_obj_file(machine_code, "asmout.obj")
+    
     
